@@ -33,6 +33,21 @@ char stock_name[50];
 double stock_balance;
 };
  
+
+//Erika-Attempting to create function call for error checking in command statements
+void checkValidBuy(void** userInput, int length){
+for(int i = 0; i < length; i++){
+if(isdigit(((char*) userInput[i])[0])){
+printf("Element %d has INTEGER VALUE, required char maybe?\n", i *(int*) userInput[i]);
+}
+else if(userInput[i] == NULL){
+printf("Element %d contains NULL value BAD INPUT\n", i);
+}
+else{
+printf("Element is a string!: %s\n", i, (char*) userInput[i]);
+}
+}
+}
  
 
 
@@ -172,6 +187,8 @@ printf("Word 1: %s, Word 2: %s\n", words[0], words[1]);
  //parameter quantity
  if(strcmp(words[0], buy) == 0){
 printf("Inside buy loop\n");
+	 //Lets see if this works
+	 checkValidInputBuy(words, numWords);
 }
 
 
