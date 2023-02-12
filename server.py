@@ -12,6 +12,19 @@ def valid_command(command):
 def buy_command(sock, db, command):
     return
 
+def sell_command(sock, db, command):
+    return
+
+def bal_command(sock, db, command):
+    #stuff
+
+    sock.send("{}".format(
+        "200 OK"
+    ))
+
+def list_command(sock, db, command):
+    return
+
 def start_server():
     # Create database connection and tables
     conn = sqlite3.connect("trading.db")
@@ -69,7 +82,7 @@ def start_server():
             data = client_socket.recv(1024)
             if not data:
                 break
-            print("Received data from client: {}".format(data))
+            print("Received: {}".format(data))
             words = data.split()
 
             # Check if user sent a valid command
@@ -77,12 +90,16 @@ def start_server():
                 if words[0] == "BUY":
                     buy_command(client_socket, conn, words)
                 elif words[0] == "SELL":
-                    sell_command()
+                    sell_command(client_socket, conn, words)
                 elif words[0] == "BALANCE":
-                    bal_command()
+                    bal_command(client_socket, conn, words)
                 elif words[0] == "LIST":
-                    list_command()
+                    list_command(client_socket, conn, words)
                 elif words[0] == "SHUTDOWN":
+                    client_socket.send("{}".format(
+                        "200 OK"
+                    ))
+
                     break
             else:
                 client_socket.send("{}".format(

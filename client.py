@@ -9,16 +9,19 @@ def start_client():
     try:
         while True:
             # Send data to the server
-            data = raw_input("Enter data to send (QUIT to exit): ")
-            if data == "QUIT":
+            send_data = raw_input("COMMAND: ")
+            if send_data == "QUIT":
+                print("200 OK")
                 break
-            client_socket.send(data)
+            client_socket.send(send_data)
 
             # Receive data from the server
-            data = client_socket.recv(1024)
-            if not data:
+            get_data = client_socket.recv(1024)
+            if not get_data:
                 break
-            print("Received data: {}".format(data))
+            print("Received data: {}".format(get_data))
+            if send_data == "SHUTDOWN":
+                break
     finally:
         # Clean up
         client_socket.close()
