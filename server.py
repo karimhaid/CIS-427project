@@ -7,8 +7,10 @@ COMMANDS = ["BUY", "SELL", "BALANCE", "LIST", "SHUTDOWN", "QUIT"]
 def valid_command(command):
     if command[0] not in COMMANDS or len(command) > 6:
         return False
-    else:
-        return True
+    return True
+
+def buy_command(sock, db, command):
+    return
 
 def start_server():
     # Create database connection and tables
@@ -39,7 +41,7 @@ def start_server():
         );"""
     )
 
-    # Check if database is empty and add user if so
+    # Check if USERS is empty and add user if so
     cursor = conn.cursor()
     cursor = conn.execute("SELECT * FROM USERS LIMIT 1")
     if cursor.fetchone() is None:
@@ -48,7 +50,7 @@ def start_server():
         VALUES (1, 'Jonathan', 'McMillan', 'jrmcmill',
         '1234', 100.00)""")
         conn.commit()
-        print("ADDED DEFAULT USER TO EMPTY DATABASE")
+        print("ADDED DEFAULT USER TO EMPTY TABLE")
 
     # Set up the server socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -71,10 +73,17 @@ def start_server():
             words = data.split()
 
             # Check if user sent a valid command
-            if valid_command == True:
-                client_socket.send("{}".format(
-                    "VALID COMMAND"
-                ))
+            if valid_command(words):
+                if words[0] == "BUY":
+                    buy_command(client_socket, conn, words)
+                elif words[0] == "SELL":
+                    sell_command()
+                elif words[0] == "BALANCE":
+                    bal_command()
+                elif words[0] == "LIST":
+                    list_command()
+                elif words[0] == "SHUTDOWN":
+                    break
             else:
                 client_socket.send("{}".format(
                     "INVALID COMMAND"
