@@ -132,7 +132,13 @@ def bal_command(sock, db, command):
     ))
 
 def list_command(sock, db, command):
-    return
+    cursor = db.cursor()
+    for row in cursor.execute(""" SELECT ID,STOCK_SYMBOL,STOCK_BALANCE,USER_ID FROM STOCKS """):
+        Stock=result[0]+" "+result[1]+" "+result[2]
+        User=result[3]
+        sock.send("{}".format(
+        "200 OK\n The list of records in the Stocks database for user 1: " + Stock + ": " + User
+    ))
 
 def start_server():
     # Create database connection and tables
@@ -143,7 +149,7 @@ def start_server():
     # conn.execute("DROP TABLE IF EXISTS USERS;")
     # conn.execute("DROP TABLE IF EXISTS STOCKS;")
     # conn.commit()
-    # DELETE THABOVE WHEN EVERYTHING WORKS THIS RESETS THE DB
+    # DELETE THE ABOVE WHEN EVERYTHING WORKS THIS RESETS THE DB
 
     conn.execute(
         """CREATE TABLE IF NOT EXISTS USERS
