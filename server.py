@@ -16,10 +16,15 @@ def sell_command(sock, db, command):
     return
 
 def bal_command(sock, db, command):
-    #stuff
+    cursor = db.cursor()
+    cursor.execute("""SELECT FIRST_NAME, LAST_NAME,
+    USD_BALANCE FROM USERS WHERE ID==1""")
+    result = cursor.fetchone()
+    name = result[0] + " " + result[1]
+    bal = format(result[2], ".2f")
 
     sock.send("{}".format(
-        "200 OK"
+        "200 OK\nBalance for user " + name + ": " + bal
     ))
 
 def list_command(sock, db, command):
@@ -56,7 +61,7 @@ def start_server():
 
     # Check if USERS is empty and add user if so
     cursor = conn.cursor()
-    cursor = conn.execute("SELECT * FROM USERS LIMIT 1")
+    cursor.execute("SELECT * FROM USERS LIMIT 1")
     if cursor.fetchone() is None:
         conn.execute("""INSERT INTO USERS (ID, FIRST_NAME,
         LAST_NAME, USER_NAME, PASSWORD, USD_BALANCE)
