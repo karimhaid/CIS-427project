@@ -45,7 +45,7 @@ def buy_command(sock, db, command):
 
     if cost > initial_bal:
         sock.send("{}".format(
-            "ERROR"  # FIX THIS!!!
+            "ERROR NOT ENOUGH MONEY TO BUY"  # FIX THIS!!!
         ))
         return
 
@@ -67,13 +67,57 @@ def buy_command(sock, db, command):
     " WHERE ID = 1;")
     db.commit()
 
+    cursor.execute("SELECT STOCK_BALANCE FROM STOCKS WHERE " +
+    "USER_ID = 1 AND STOCK_SYMBOL = '" + ticker + "';")
+    result = cursor.fetchone()
+
     sock.send("{}".format(
-        "200 OK\nBOUGHT: New balance: " + command[2] + " " + ticker +
-        ". USD balance " + str(new_bal)
+        "200 OK\nBOUGHT: New balance: " + str(result[0]) + " " +
+        ticker + ". USD balance " + str(new_bal)
     ))
 
 def sell_command(sock, db, command):
-    return
+    cursor = db.cursor()
+    gain = float(command[2]) * float(command[3])  # quantity * price
+    cursor.execute("""SELECT USD_BALANCE FROM USERS
+    WHERE ID = 1;""")
+    result = cursor.fetchone()
+    initial_bal = result[0]
+    ticker = command[1]
+
+    cursor.execute("SELECT STOCK_BALANCE FROM STOCKS WHERE "+
+    "USER_ID = 1 AND STOCK_SYMBOL = '" + ticker + "';")
+    result = cursor.fetchone()
+
+    if result is None:
+        sock.send("{}".format(
+            "ERROR DON'T HAVE STOCK"  # FIX THIS!!!
+        ))
+        return
+    initial_stock_bal = result[0]
+
+    if float(command[2]) > initial_stock_bal:
+        sock.send("{}".format(
+            "ERROR DON'T HAVE ENOUGH TO SELL"  # FIX THIS!!!
+        ))
+        return
+
+    new_bal = initial_bal + gain
+    db.execute("UPDATE STOCKS SET STOCK_BALANCE = STOCK_BALANCE - " +
+    command[2] + " WHERE USER_ID = 1 AND STOCK_SYMBOL = '" +
+    ticker + "';")
+    db.execute("UPDATE USERS SET USD_BALANCE = " + str(new_bal) +
+    " WHERE ID = 1;")
+    db.commit()
+
+    cursor.execute("SELECT STOCK_BALANCE FROM STOCKS WHERE " +
+    "USER_ID = 1 AND STOCK_SYMBOL = '" + ticker + "';")
+    result = cursor.fetchone()
+
+    sock.send("{}".format(
+        "200 OK\nSOLD: New balance: " + str(result[0]) + " " + ticker +
+        ". USD balance " + str(new_bal)
+    ))
 
 def bal_command(sock, db, command):
     cursor = db.cursor()
@@ -172,7 +216,7 @@ def start_server():
                     break
             else:
                 client_socket.send("{}".format(
-                    "INVALID COMMAND"  # FIX THIS!!!
+                    "INVALID COMMAND CHECK INPUT"  # FIX THIS!!!
                 ))
 
             # Send data back to the client
