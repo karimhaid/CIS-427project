@@ -5,12 +5,72 @@ import sqlite3
 COMMANDS = ["BUY", "SELL", "BALANCE", "LIST", "SHUTDOWN", "QUIT"]
 
 def valid_command(command):
-    if command[0] not in COMMANDS or len(command) > 6:
+    if command[0] not in COMMANDS or len(command) > 5:
+        return False
+    if command[0] == "BUY" and (len(command) != 5 or \
+        3 > len(command[1]) > 4):
+        return False
+    elif command[0] == "BUY":
+        try:
+            float(command[2])
+            float(command[3])
+        except ValueError:
+            return False
+    if command[0] == "SELL" and (len(command) != 5 or \
+        3 > len(command[1]) > 4):
+        return False
+    elif command[0] == "SELL":
+        try:
+            float(command[2])
+            float(command[3])
+        except ValueError:
+            return False
+    if command[0] == "LIST" and len(command) != 1:
+        return False
+    if command[0] == "BALANCE" and len(command) != 1:
+        return False
+    if command[0] == "SHUTDOWN" and len(command) != 1:
+        return False
+    if command[0] == "QUIT" and len(command) != 1:
         return False
     return True
 
 def buy_command(sock, db, command):
-    return
+    cursor = db.cursor()
+    cost = float(command[2]) * float(command[3])  # quantity * price
+    cursor.execute("""SELECT USD_BALANCE FROM USERS
+    WHERE ID = 1;""")
+    result = cursor.fetchone()
+    initial_bal = result[0]
+
+    if cost > initial_bal:
+        sock.send("{}".format(
+            "ERROR"  # FIX THIS!!!
+        ))
+        return
+
+    new_bal = initial_bal - cost
+    ticker = command[1]
+    cursor.execute("SELECT * FROM STOCKS WHERE USER_ID = 1 AND " +
+    "STOCK_SYMBOL = '" + ticker + "';")
+    result = cursor.fetchone()
+
+    if result is None:
+        db.execute("INSERT INTO STOCKS (STOCK_SYMBOL," +
+        "STOCK_NAME, STOCK_BALANCE, USER_ID) VALUES ('" +
+        ticker + "', '" + ticker + "', " + command[2] + ", 1);")
+    else:
+        db.execute("UPDATE STOCKS SET STOCK_BALANCE = STOCK_BALANCE + " +
+        command[2] + " WHERE USER_ID = 1 AND STOCK_SYMBOL = '" +
+        ticker + "';")
+    db.execute("UPDATE USERS SET USD_BALANCE = " + str(new_bal) +
+    " WHERE ID = 1;")
+    db.commit()
+
+    sock.send("{}".format(
+        "200 OK\nBOUGHT: New balance: " + command[2] + " " + ticker +
+        ". USD balance " + str(new_bal)
+    ))
 
 def sell_command(sock, db, command):
     return
@@ -18,7 +78,7 @@ def sell_command(sock, db, command):
 def bal_command(sock, db, command):
     cursor = db.cursor()
     cursor.execute("""SELECT FIRST_NAME, LAST_NAME,
-    USD_BALANCE FROM USERS WHERE ID==1""")
+    USD_BALANCE FROM USERS WHERE ID = 1;""")
     result = cursor.fetchone()
     name = result[0] + " " + result[1]
     bal = format(result[2], ".2f")
@@ -34,27 +94,32 @@ def start_server():
     # Create database connection and tables
     conn = sqlite3.connect("trading.db")
     print("CONNECTED TO DATABASE")
+
+    # DELETE THIS WHEN EVERTHING WORKS THIS RESETS THE DB
+    # conn.execute("DROP TABLE IF EXISTS USERS;")
+    # conn.execute("DROP TABLE IF EXISTS STOCKS;")
+    # conn.commit()
+    # DELETE THABOVE WHEN EVERYTHING WORKS THIS RESETS THE DB
+
     conn.execute(
         """CREATE TABLE IF NOT EXISTS USERS
         (
-            ID INTEGER AUTO_INCREMENT NOT NULL,
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
             FIRST_NAME VARCHAR(255),
             LAST_NAME VARCHAR(255),
             USER_NAME VARCHAR(255) NOT NULL,
             PASSWORD VARCHAR(255),
-            USD_BALANCE DOUBLE NOT NULL,
-            PRIMARY KEY (ID)
+            USD_BALANCE DOUBLE NOT NULL
         );"""
     )
     conn.execute(
         """CREATE TABLE IF NOT EXISTS STOCKS
         (
-            ID INTEGER AUTO_INCREMENT NOT NULL,
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
             STOCK_SYMBOL VARCHAR(4) NOT NULL,
             STOCK_NAME VARCHAR(20) NOT NULL,
             STOCK_BALANCE DOUBLE,
             USER_ID INTEGER,
-            PRIMARY KEY (ID),
             FOREIGN KEY (USER_ID) REFERENCES USERS (ID)
         );"""
     )
@@ -63,10 +128,10 @@ def start_server():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM USERS LIMIT 1")
     if cursor.fetchone() is None:
-        conn.execute("""INSERT INTO USERS (ID, FIRST_NAME,
+        conn.execute("""INSERT INTO USERS (FIRST_NAME,
         LAST_NAME, USER_NAME, PASSWORD, USD_BALANCE)
-        VALUES (1, 'Jonathan', 'McMillan', 'jrmcmill',
-        '1234', 100.00)""")
+        VALUES ('Jonathan', 'McMillan', 'jrmcmill',
+        '1234', 100.00);""")
         conn.commit()
         print("ADDED DEFAULT USER TO EMPTY TABLE")
 
@@ -104,11 +169,10 @@ def start_server():
                     client_socket.send("{}".format(
                         "200 OK"
                     ))
-
                     break
             else:
                 client_socket.send("{}".format(
-                    "INVALID COMMAND"
+                    "INVALID COMMAND"  # FIX THIS!!!
                 ))
 
             # Send data back to the client
