@@ -1,30 +1,21 @@
+//Original files created and tested by Erika to ensure connection
+//Different than files provided by professor as those did not produce usable output
+
 #include <stdio.h>
-
 #include <netdb.h>
-
 #include <netinet/in.h>
-
 #include <stdlib.h>
-
 #include <string.h>
-
 #include <sys/socket.h>
-
 #include <sys/types.h>
-
-#include <unistd.h> // read(), write(), close()
-
-
-
+#include <unistd.h> 
 
 
 #define MAX 80
-
 #define PORT 8080
-
 #define SA struct sockaddr
 
-
+//Erika-Added user structs for file and user information
 struct Users{
 int userID;
 char first_name[50];
@@ -46,17 +37,13 @@ double stock_balance;
 
 
 
-
-// Function designed for chat between client and server for conditions for stocks
-
+//Erika- Function designed for chat between client and server for conditions for stocks
 //Put Function calls, and info here, this continues on until specific terms are met so it ensures our server
-
 //stays open
-
 void func(int connfd)
 
 {
-
+//Erika-Created initial file checks for error checking
 //File Check, check for server before writing more
 //FILE *file;
 //if(file = fopen("File.txt", "r")){
@@ -67,7 +54,7 @@ void func(int connfd)
 //printf("File doesn't exist\n");
 //}
  
-//Check if File with User data exists
+//Erika-Check if File with User data exists
 FILE *usersFile;
 char data[50];
  //Check if exists and print to screen for now for error checking
@@ -76,7 +63,7 @@ fclose(usersFile);
 printf("file exists\n");
 }
  
-//If Doesn't exist, so create it
+//Erika-If Doesn't exist, so create it, have output and screenshots to ensure working properly
 else{
 usersFile = fopen("UserFiles.txt", "w");
  //Initial creation 
@@ -92,93 +79,153 @@ fclose(usersFile);
 }
  
  
-
-
-
-
-
-
     char buff[MAX];
-
     int n;
-
+//Created array to copy buffer information into
 char arrayCopy[MAX];
 
     // infinite loop for chat
-
     for (;;) {
-
         bzero(buff, MAX);
-
-
+     
+//Erika- Variable declarations and initializations to compare client input
+//with commands
+char buy[] = "BUY";
+char sell[] = "SELL";
+char list[] = "LIST";
+char balance[] = "BALANCE";
+char shutdown[] = "SHUTDOWN";
+     
+int k = 0;
 
         // read the message from client and copy it in buffer
-
         read(connfd, buff, sizeof(buff));
 
-
+//Created by Erika & Jonathan to read buffer information into
 char temp_strings[6 * 50];
         char words[6][50];
-
-
         int numWords = 0;
+     //Copy buffer into created array
         memcpy(arrayCopy, buff, sizeof(buff));
         //char *p = strtok(trial_string, " ");
         //char *p = strtok(buff, " ");
         char *p = strtok(arrayCopy, " ");
+     
+     //Loop through array to get information
         while (p != NULL)
         {
             strcpy(words[numWords++], p);
+         //Erika-Loop through to determine which words are integers and which 
+         //are strings, output for error checking
+         //attempted to move command input here but loops through each time
+         //and can remove printed output instead of creating long loops for each
+         //command
+int is_integer = 1;
+//Read in each array element pointed to by pointer
+for(k; k < strlen(p); k++){
+if(!isdigit(p[k])){
+is_integer = 0;
+break;
+}
+}
+//If the pointer is an integer or string produce output for error checking
+if(is_integer){
+printf("%s is an integer\n", p);
+            } else {
+              printf("%s is a string\n", p);
+           }
+         //This was an error check by Erika to ensure output stopped if it encountered a specific 
+         //input for later user input 
+//else {
+              //  printf("%s is a string, ERROR ERROR should have been an integer\n", p);
+			//break;
+            //}
+
+            // Move to the next token
             p = strtok(NULL, " ");
-        }
 
+}
+        
 
+        
+
+//Created by Erika & Jonathan to ensure information printed to screen
         printf("ALL WORDS:\n");
         int i = 0;
         for (i; i < numWords; i++)
         {
             printf("%s\n", words[i]);
         }
+
+     
+//check if we can print words out here individually to do stuff with them
+printf("Word 1: %s, Word 2: %s\n", words[0], words[1]);
+
+
+        }
+
+
         // TRIAL !!!
+ 
+ //Erika-Created command input loops to print to screen for now to ensure enters correct loop
+ //Must be careful where these are placed or you encounter segmentation fault and alternate
+ //parameter quantity
+ if(strcmp(words[0], buy) == 0){
+printf("Inside buy loop\n");
+}
+
+
+if(strcmp(words[0], sell) == 0){
+printf("Inside sell loop\n");
+
+
+}
+
+if(strcmp(words[0], list) == 0){
+printf("Inside list loop\n");
+
+
+}
+
+if(strcmp(words[0], balance) == 0){
+printf("Inside balance loop\n");
+
+
+}
+
+if(strcmp(words[0], shutdown) == 0){
+printf("Inside shutdown loop\n");
+
+
+}
+
+
 
 
 
         // print buffer which contains the client contents
-
         printf("From client: %s\t To client : ", buff);
 
 
  
 //ADDED TO COPY ARRAY for testing
 memcpy(arrayCopy, buff, sizeof(buff));
+ 
+ 
+         // print buffer which contains the client contents
 printf("Array Copy buff check- %s...", buff);  
-
-
-
         bzero(buff, MAX);
-
         n = 0;
-
         // copy server message in the buffer
-
         while ((buff[n++] = getchar()) != '\n')
-
             ;
 
-
-
         // and send that buffer to client
-
         write(connfd, buff, sizeof(buff));
 
-
-
         // if msg contains "Exit" then server exit and chat ended.
-
         if (strncmp("exit", buff, 4) == 0) {
-
             printf("Server Exit...\n");
-
             break;
 
         }
