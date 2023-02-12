@@ -9,8 +9,8 @@ def start_client():
     try:
         while True:
             # Send data to the server
-            data = raw_input("Enter data to send (quit to exit): ")
-            if data == "quit":
+            data = raw_input("Enter data to send (QUIT to exit): ")
+            if data == "QUIT":
                 break
             client_socket.send(data)
 
