@@ -35,20 +35,22 @@ double stock_balance;
  
 
 //Erika-Attempting to create function call for error checking in command statements
+//fixing errors
 void checkValidBuy(void** userInput, int length){
-for(int i = 0; i < length; i++){
-if(isdigit(((char*) userInput[i])[0])){
-printf("Element %d has INTEGER VALUE, required char maybe?\n", i *(int*) userInput[i]);
+int l = 0;
+for(l; l < length; l++){
+if(isdigit(((char*) userInput[l])[0])){
+printf("Element %d has INTEGER VALUE, required char maybe?\n", l, *(int*) userInput[l]);
 }
-else if(userInput[i] == NULL){
-printf("Element %d contains NULL value BAD INPUT\n", i);
+else if(userInput[l] == NULL){
+printf("Element %d contains NULL value BAD INPUT\n", l);
 }
 else{
-printf("Element is a string!: %s\n", i, (char*) userInput[i]);
+printf("Element is a string!: %s\n", l, (char*) userInput[l]);
 }
 }
 }
- 
+
 
 
 
