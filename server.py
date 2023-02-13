@@ -1,8 +1,10 @@
 import socket
 import sqlite3
 
+
 # List of commands for client to use
 COMMANDS = ["BUY", "SELL", "BALANCE", "LIST", "SHUTDOWN", "QUIT"]
+
 
 def valid_command(command):
     if command[0] not in COMMANDS or len(command) > 5:
@@ -34,6 +36,7 @@ def valid_command(command):
     if command[0] == "QUIT" and len(command) != 1:
         return False
     return True
+
 
 def buy_command(sock, db, command):
     cursor = db.cursor()
@@ -75,6 +78,7 @@ def buy_command(sock, db, command):
         "200 OK\nBOUGHT: New balance: " + str(result[0]) + " " +
         ticker + ". USD balance " + str(new_bal)
     ))
+
 
 def sell_command(sock, db, command):
     cursor = db.cursor()
@@ -119,6 +123,7 @@ def sell_command(sock, db, command):
         ". USD balance " + str(new_bal)
     ))
 
+
 def bal_command(sock, db, command):
     cursor = db.cursor()
     cursor.execute("""SELECT FIRST_NAME, LAST_NAME,
@@ -131,14 +136,19 @@ def bal_command(sock, db, command):
         "200 OK\nBalance for user " + name + ": " + bal
     ))
 
+
 def list_command(sock, db, command):
     cursor = db.cursor()
-    for row in cursor.execute(""" SELECT ID,STOCK_SYMBOL,STOCK_BALANCE,USER_ID FROM STOCKS """):
-        Stock=result[0]+" "+result[1]+" "+result[2]
-        User=result[3]
-        sock.send("{}".format(
-        "200 OK\n The list of records in the Stocks database for user 1: " + Stock + ": " + User
-    ))
+    output="The list of records in the Stocks database for user 1: \n"
+    for row in cursor.execute("""SELECT ID,STOCK_SYMBOL,STOCK_BALANCE,USER_ID FROM STOCKS
+    WHERE USER_ID = 1"""):
+        Stock=str(row[0])+" "+str(row[1])+" "+str(row[2])
+        User=str(row[3])
+        output+=Stock+" "+ User+"\n"
+    sock.send("{}".format(
+    "200 OK\n  " + output
+))
+
 
 def start_server():
     # Create database connection and tables
@@ -196,45 +206,56 @@ def start_server():
     print("Accepted connection from {}".format(client_address))
 
     # Communicate with the client
-    try:
-        while True:
-            # Receive data from the client
-            data = client_socket.recv(1024)
-            if not data:
-                break
-            print("Received: {}".format(data))
-            words = data.split()
+    #try:
+    while True:
+        # Receive data from the client
+        data = client_socket.recv(1024)
+        if not data:
+            break
+        print("Received: {}".format(data))
+        words = data.split()
 
-            # Check if user sent a valid command
-            if valid_command(words):
-                if words[0] == "BUY":
-                    buy_command(client_socket, conn, words)
-                elif words[0] == "SELL":
-                    sell_command(client_socket, conn, words)
-                elif words[0] == "BALANCE":
-                    bal_command(client_socket, conn, words)
-                elif words[0] == "LIST":
-                    list_command(client_socket, conn, words)
-                elif words[0] == "SHUTDOWN":
-                    client_socket.send("{}".format(
-                        "200 OK"
-                    ))
-                    break
-            else:
+        # Check if user sent a valid command
+        if valid_command(words):
+            if words[0] == "BUY":
+                buy_command(client_socket, conn, words)
+            elif words[0] == "SELL":
+                sell_command(client_socket, conn, words)
+            elif words[0] == "BALANCE":
+                bal_command(client_socket, conn, words)
+            elif words[0] == "LIST":
+                list_command(client_socket, conn, words)
+            elif words[0] == "QUIT":
                 client_socket.send("{}".format(
-                    "INVALID COMMAND CHECK INPUT"  # FIX THIS!!!
+                    "200 OK"
                 ))
+                server_socket.close()
+                print("Connection closed")
+            elif words[0] == "SHUTDOWN":
+                client_socket.send("{}".format(
+                    "200 OK"
+                ))
+                client_socket.close()
+                server_socket.close()
+                print("Connection closed")
+                exit()
+
+        else:
+            client_socket.send("{}".format(
+                "INVALID COMMAND CHECK INPUT"  # FIX THIS!!!
+            ))
 
             # Send data back to the client
             # server_message = raw_input("Enter message to send back to the client (quit to exit): ")
             # if server_message == "quit":
             #     break
             # client_socket.send("{}".format(server_message))
-    finally:
-        # Clean up
-        client_socket.close()
-        server_socket.close()
-        print("Connection closed")
+    # finally:
+    #     # Clean up
+    #     client_socket.close()
+    #     server_socket.close()
+    #     print("Connection closed")
+
 
 if __name__ == "__main__":
     while True:
