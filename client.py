@@ -2,6 +2,7 @@ import socket
 import sys
 
 
+# List of valid arguments
 VALID_IPS = ["localhost", "127.0.0.1"]
 
 
@@ -11,13 +12,9 @@ def start_client(ip):
     client_socket.connect((ip, 5753))
 
     # Communicate with the server
-    #try:
     while True:
         # Send data to the server
         send_data = raw_input("COMMAND: ")
-        # if send_data == "QUIT":
-        #     print("200 OK")
-        #     break
         client_socket.send(send_data)
 
         # Receive data from the server
@@ -25,22 +22,22 @@ def start_client(ip):
         if not get_data:
             break
         print("Received data: {}".format(get_data))
+
+        # Clean up for SHUTDOWN and QUIT commands
         if send_data == "SHUTDOWN" or send_data == "QUIT":
             client_socket.close()
             print("Connection closed")
             exit()
-    # finally:
-    #     # Clean up
-    #     client_socket.close()
-    #     print("Connection closed")
-    #     exit()
 
 
 if __name__ == '__main__':
+    # Get IP argument for client connection
     ip_address = sys.argv[1]
 
+    # Error for invalid arguments or missing argument
     if len(sys.argv) < 2 or ip_address not in VALID_IPS:
         print("Usage: client <Server IP Address>")
         exit()
+    # Otherwise start the client with the given argument
     else:
         start_client(ip_address)
