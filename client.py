@@ -21,7 +21,8 @@ def start_client(ip):
         get_data = client_socket.recv(1024)
         if not get_data:
             break
-        print("Received data: {}".format(get_data))
+        #print("Received data: {}".format(get_data))
+        print("{}".format(get_data))
 
         # Clean up for SHUTDOWN and QUIT commands
         if send_data == "SHUTDOWN" or send_data == "QUIT":

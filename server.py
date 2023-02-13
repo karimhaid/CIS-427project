@@ -7,17 +7,21 @@ COMMANDS = ["BUY", "SELL", "BALANCE", "LIST", "SHUTDOWN", "QUIT"]
 
 
 def valid_command(command):
+    # Check if first word is valid and if word count is valid
     if command[0] not in COMMANDS or len(command) > 5:
         return False
+    # Check if BUY command has valid stock ticker
     if command[0] == "BUY" and (len(command) != 5 or \
         3 > len(command[1]) > 4):
         return False
+    # Check if BUY command has valid numeric values
     elif command[0] == "BUY":
         try:
             float(command[2])
             float(command[3])
         except ValueError:
             return False
+    # Check the same as above in BUY but for SELL command
     if command[0] == "SELL" and (len(command) != 5 or \
         3 > len(command[1]) > 4):
         return False
@@ -27,6 +31,7 @@ def valid_command(command):
             float(command[3])
         except ValueError:
             return False
+    # Check if remaining commands are only one word
     if command[0] == "LIST" and len(command) != 1:
         return False
     if command[0] == "BALANCE" and len(command) != 1:
@@ -35,45 +40,55 @@ def valid_command(command):
         return False
     if command[0] == "QUIT" and len(command) != 1:
         return False
+    # Otherwise return True indicating valid command
     return True
 
 
 def buy_command(sock, db, command):
+    # Initialize DB cursor for SQL
     cursor = db.cursor()
+    # Determine cost and get user balance
     cost = float(command[2]) * float(command[3])  # quantity * price
     cursor.execute("""SELECT USD_BALANCE FROM USERS
     WHERE ID = 1;""")
     result = cursor.fetchone()
     initial_bal = result[0]
 
+    # Error if user has insufficient balance
     if cost > initial_bal:
         sock.send("{}".format(
             "ERROR NOT ENOUGH MONEY TO BUY"  # FIX THIS!!!
         ))
         return
 
+    # Determine new balance and get user's current stock
     new_bal = initial_bal - cost
     ticker = command[1]
     cursor.execute("SELECT * FROM STOCKS WHERE USER_ID = 1 AND " +
     "STOCK_SYMBOL = '" + ticker + "';")
     result = cursor.fetchone()
 
+    # Add stock if user doesn't yet have
     if result is None:
         db.execute("INSERT INTO STOCKS (STOCK_SYMBOL," +
         "STOCK_NAME, STOCK_BALANCE, USER_ID) VALUES ('" +
         ticker + "', '" + ticker + "', " + command[2] + ", 1);")
+    # Otherwise increment the user's stock
     else:
         db.execute("UPDATE STOCKS SET STOCK_BALANCE = STOCK_BALANCE + " +
         command[2] + " WHERE USER_ID = 1 AND STOCK_SYMBOL = '" +
         ticker + "';")
+    # Update user's balance
     db.execute("UPDATE USERS SET USD_BALANCE = " + str(new_bal) +
     " WHERE ID = 1;")
     db.commit()
 
+    # Get STOCK_BALANCE for outgoing message to client
     cursor.execute("SELECT STOCK_BALANCE FROM STOCKS WHERE " +
     "USER_ID = 1 AND STOCK_SYMBOL = '" + ticker + "';")
     result = cursor.fetchone()
 
+    # Indicate success to client with info
     sock.send("{}".format(
         "200 OK\nBOUGHT: New balance: " + str(result[0]) + " " +
         ticker + ". USD balance " + str(new_bal)
@@ -81,7 +96,9 @@ def buy_command(sock, db, command):
 
 
 def sell_command(sock, db, command):
+    # Initialize DB cursor for SQL
     cursor = db.cursor()
+    # Determine gain and get user balance
     gain = float(command[2]) * float(command[3])  # quantity * price
     cursor.execute("""SELECT USD_BALANCE FROM USERS
     WHERE ID = 1;""")
@@ -89,10 +106,12 @@ def sell_command(sock, db, command):
     initial_bal = result[0]
     ticker = command[1]
 
+    # Get user's stock balance
     cursor.execute("SELECT STOCK_BALANCE FROM STOCKS WHERE "+
     "USER_ID = 1 AND STOCK_SYMBOL = '" + ticker + "';")
     result = cursor.fetchone()
 
+    # Error if user doesn't have the stock
     if result is None:
         sock.send("{}".format(
             "ERROR DON'T HAVE STOCK"  # FIX THIS!!!
@@ -100,12 +119,14 @@ def sell_command(sock, db, command):
         return
     initial_stock_bal = result[0]
 
+    # Error if user has insufficient stock
     if float(command[2]) > initial_stock_bal:
         sock.send("{}".format(
             "ERROR DON'T HAVE ENOUGH TO SELL"  # FIX THIS!!!
         ))
         return
 
+    # Determine new balance and update that and stock amount
     new_bal = initial_bal + gain
     db.execute("UPDATE STOCKS SET STOCK_BALANCE = STOCK_BALANCE - " +
     command[2] + " WHERE USER_ID = 1 AND STOCK_SYMBOL = '" +
@@ -114,10 +135,12 @@ def sell_command(sock, db, command):
     " WHERE ID = 1;")
     db.commit()
 
+    # Get updated balances for outgoing message to client
     cursor.execute("SELECT STOCK_BALANCE FROM STOCKS WHERE " +
     "USER_ID = 1 AND STOCK_SYMBOL = '" + ticker + "';")
     result = cursor.fetchone()
 
+    # Indicate success to client with info
     sock.send("{}".format(
         "200 OK\nSOLD: New balance: " + str(result[0]) + " " + ticker +
         ". USD balance " + str(new_bal)
@@ -125,29 +148,36 @@ def sell_command(sock, db, command):
 
 
 def bal_command(sock, db, command):
+    # Initialize DB cursor for SQL
     cursor = db.cursor()
+    # Get user's name and balance
     cursor.execute("""SELECT FIRST_NAME, LAST_NAME,
     USD_BALANCE FROM USERS WHERE ID = 1;""")
     result = cursor.fetchone()
     name = result[0] + " " + result[1]
     bal = format(result[2], ".2f")
 
+    # Outgoing client message with info
     sock.send("{}".format(
         "200 OK\nBalance for user " + name + ": " + bal
     ))
 
 
 def list_command(sock, db, command):
+    # Initialize DB cursor for SQL
     cursor = db.cursor()
+    # Get listing info from user for each stock and output
     output="The list of records in the Stocks database for user 1: \n"
     for row in cursor.execute("""SELECT ID,STOCK_SYMBOL,STOCK_BALANCE,USER_ID FROM STOCKS
     WHERE USER_ID = 1"""):
         Stock=str(row[0])+" "+str(row[1])+" "+str(row[2])
         User=str(row[3])
         output+=Stock+" "+ User+"\n"
+
+    # Outgoing client message with info
     sock.send("{}".format(
-    "200 OK\n  " + output
-))
+        "200 OK\n  " + output
+        ))
 
 
 def start_server():
@@ -155,12 +185,13 @@ def start_server():
     conn = sqlite3.connect("trading.db")
     print("CONNECTED TO DATABASE")
 
-    # DELETE THIS WHEN EVERTHING WORKS THIS RESETS THE DB
+    # USE THIS BLOCK FOR RESETTING THE TABLES!!!
     # conn.execute("DROP TABLE IF EXISTS USERS;")
     # conn.execute("DROP TABLE IF EXISTS STOCKS;")
     # conn.commit()
-    # DELETE THE ABOVE WHEN EVERYTHING WORKS THIS RESETS THE DB
+    # USE ABOVE BLOCK FOR RESETTING THE TABLES!!!
 
+    # Create the USERS and STOCKS tables if missing
     conn.execute(
         """CREATE TABLE IF NOT EXISTS USERS
         (
@@ -184,7 +215,7 @@ def start_server():
         );"""
     )
 
-    # Check if USERS is empty and add user if so
+    # Check if USERS is empty and add default user if so
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM USERS LIMIT 1")
     if cursor.fetchone() is None:
@@ -206,7 +237,6 @@ def start_server():
     print("Accepted connection from {}".format(client_address))
 
     # Communicate with the client
-    #try:
     while True:
         # Receive data from the client
         data = client_socket.recv(1024)
@@ -239,24 +269,14 @@ def start_server():
                 server_socket.close()
                 print("Connection closed")
                 exit()
-
+        # Otherwise indicate invalid command received
         else:
             client_socket.send("{}".format(
                 "INVALID COMMAND CHECK INPUT"  # FIX THIS!!!
             ))
 
-            # Send data back to the client
-            # server_message = raw_input("Enter message to send back to the client (quit to exit): ")
-            # if server_message == "quit":
-            #     break
-            # client_socket.send("{}".format(server_message))
-    # finally:
-    #     # Clean up
-    #     client_socket.close()
-    #     server_socket.close()
-    #     print("Connection closed")
-
 
 if __name__ == "__main__":
+    # Start the server and wait for client connection
     while True:
         start_server()
