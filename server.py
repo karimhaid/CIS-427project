@@ -57,7 +57,7 @@ def buy_command(sock, db, command):
     # Error if user has insufficient balance
     if cost > initial_bal:
         sock.send("{}".format(
-            "ERROR NOT ENOUGH MONEY TO BUY"  # FIX THIS!!!
+            "403 message format error: Insufficient Funds"  
         ))
         return
 
@@ -114,7 +114,7 @@ def sell_command(sock, db, command):
     # Error if user doesn't have the stock
     if result is None:
         sock.send("{}".format(
-            "ERROR DON'T HAVE STOCK"  # FIX THIS!!!
+            "403 message format error: Stock not found in bought list" 
         ))
         return
     initial_stock_bal = result[0]
@@ -122,7 +122,7 @@ def sell_command(sock, db, command):
     # Error if user has insufficient stock
     if float(command[2]) > initial_stock_bal:
         sock.send("{}".format(
-            "ERROR DON'T HAVE ENOUGH TO SELL"  # FIX THIS!!!
+            "403 message format error: Insufficient Stock" 
         ))
         return
 
@@ -272,7 +272,7 @@ def start_server():
         # Otherwise indicate invalid command received
         else:
             client_socket.send("{}".format(
-                "INVALID COMMAND CHECK INPUT"  # FIX THIS!!!
+                "400 invalid command"  # Invalid command error
             ))
 
 
