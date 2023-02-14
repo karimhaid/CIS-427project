@@ -12,7 +12,7 @@ def valid_command(command):
         return False
     # Check if BUY command has valid stock ticker
     if command[0] == "BUY" and (len(command) != 5 or \
-        3 > len(command[1]) > 4):
+        len(command[1]) > 5):
         return False
     # Check if BUY command has valid numeric values
     elif command[0] == "BUY":
@@ -24,7 +24,7 @@ def valid_command(command):
             return False
     # Check the same as above in BUY but for SELL command
     if command[0] == "SELL" and (len(command) != 5 or \
-        3 > len(command[1]) > 4):
+        len(command[1]) > 5):
         return False
     elif command[0] == "SELL":
         try:
@@ -185,12 +185,18 @@ def list_command(sock, db, command):
     cursor = db.cursor()
     # Get listing info from user for each stock and output
     # (default to USER_ID = 1 for this program)
-    output="The list of records in the Stocks database for user 1: \n"
-    for row in cursor.execute("""SELECT ID,STOCK_SYMBOL,STOCK_BALANCE,USER_ID FROM STOCKS
-    WHERE USER_ID = 1"""):
-        Stock=str(row[0])+" "+str(row[1])+" "+str(row[2])
-        User=str(row[3])
-        output+=Stock+" "+ User+"\n"
+    cursor.execute("SELECT ID FROM STOCKS WHERE USER_ID=1;")
+    result = cursor.fetchone()
+    # Send client a message if no stocks yet traded
+    if result is None:
+        output="EMPTY: no stocks have been traded yet"
+    else:
+        output="The list of records in the Stocks database for user 1: \n"
+        for row in cursor.execute("""SELECT ID,STOCK_SYMBOL,STOCK_BALANCE,USER_ID FROM STOCKS
+        WHERE USER_ID = 1;"""):
+            Stock=str(row[0])+" "+str(row[1])+" "+str(row[2])
+            User=str(row[3])
+            output+=Stock+" "+ User+"\n"
 
     # Outgoing client message with info
     sock.send("{}".format(
