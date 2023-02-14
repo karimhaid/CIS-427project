@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     # Error for invalid arguments or missing argument
     if len(sys.argv) < 2 or ip_address not in VALID_IPS:
-        print("Usage: client <Server IP Address>")
+        print("Usage: client <Server IP Address> INVALID IP")
         exit()
     # Otherwise start the client with the given argument
     else:

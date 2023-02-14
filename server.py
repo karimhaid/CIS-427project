@@ -17,8 +17,9 @@ def valid_command(command):
     # Check if BUY command has valid numeric values
     elif command[0] == "BUY":
         try:
-            float(command[2])
-            float(command[3])
+            float(command[2])  # stock quantity
+            float(command[3])  # price
+            int(command[4])  # user ID
         except ValueError:
             return False
     # Check the same as above in BUY but for SELL command
@@ -29,6 +30,7 @@ def valid_command(command):
         try:
             float(command[2])
             float(command[3])
+            int(command[4])
         except ValueError:
             return False
     # Check if remaining commands are only one word
@@ -49,49 +51,57 @@ def buy_command(sock, db, command):
     cursor = db.cursor()
     # Determine cost and get user balance
     cost = float(command[2]) * float(command[3])  # quantity * price
-    cursor.execute("""SELECT USD_BALANCE FROM USERS
-    WHERE ID = 1;""")
+    cursor.execute("SELECT USD_BALANCE FROM USERS WHERE ID = " +
+    command[4] + ";")
     result = cursor.fetchone()
+    if result is None:
+        sock.send("{}".format(
+            "400 invalid command: user " + command[4] +
+            " doesn't exist\n"  
+        ))
+        return
     initial_bal = result[0]
 
     # Error if user has insufficient balance
     if cost > initial_bal:
         sock.send("{}".format(
-            "403 message format error: Insufficient Funds"  
+            "400 invalid command: Insufficient funds\n"  
         ))
         return
 
     # Determine new balance and get user's current stock
     new_bal = initial_bal - cost
     ticker = command[1]
-    cursor.execute("SELECT * FROM STOCKS WHERE USER_ID = 1 AND " +
-    "STOCK_SYMBOL = '" + ticker + "';")
+    cursor.execute("SELECT * FROM STOCKS WHERE USER_ID = " +
+    command[4] + " AND STOCK_SYMBOL = '" + ticker + "';")
     result = cursor.fetchone()
 
     # Add stock if user doesn't yet have
     if result is None:
         db.execute("INSERT INTO STOCKS (STOCK_SYMBOL," +
         "STOCK_NAME, STOCK_BALANCE, USER_ID) VALUES ('" +
-        ticker + "', '" + ticker + "', " + command[2] + ", 1);")
+        ticker + "', '" + ticker + "', " + command[2] + ", " + 
+        command[4] + ");")
     # Otherwise increment the user's stock
     else:
         db.execute("UPDATE STOCKS SET STOCK_BALANCE = STOCK_BALANCE + " +
-        command[2] + " WHERE USER_ID = 1 AND STOCK_SYMBOL = '" +
+        command[2] + " WHERE USER_ID = " +
+        command[4] + " AND STOCK_SYMBOL = '" +
         ticker + "';")
     # Update user's balance
     db.execute("UPDATE USERS SET USD_BALANCE = " + str(new_bal) +
-    " WHERE ID = 1;")
+    " WHERE ID = " + command[4] + ";")
     db.commit()
 
     # Get STOCK_BALANCE for outgoing message to client
     cursor.execute("SELECT STOCK_BALANCE FROM STOCKS WHERE " +
-    "USER_ID = 1 AND STOCK_SYMBOL = '" + ticker + "';")
+    "USER_ID = " + command[4] + " AND STOCK_SYMBOL = '" + ticker + "';")
     result = cursor.fetchone()
 
     # Indicate success to client with info
     sock.send("{}".format(
         "200 OK\nBOUGHT: New balance: " + str(result[0]) + " " +
-        ticker + ". USD balance " + str(new_bal)
+        ticker + ". USD balance " + str(new_bal) + "\n"
     ))
 
 
@@ -100,21 +110,27 @@ def sell_command(sock, db, command):
     cursor = db.cursor()
     # Determine gain and get user balance
     gain = float(command[2]) * float(command[3])  # quantity * price
-    cursor.execute("""SELECT USD_BALANCE FROM USERS
-    WHERE ID = 1;""")
+    cursor.execute("SELECT USD_BALANCE FROM USERS " +
+    "WHERE ID = " + command[4] + ";")
     result = cursor.fetchone()
+    if result is None:
+        sock.send("{}".format(
+            "400 invalid command: user " + command[4] +
+            " doesn't exist\n"  
+        ))
+        return
     initial_bal = result[0]
     ticker = command[1]
 
     # Get user's stock balance
     cursor.execute("SELECT STOCK_BALANCE FROM STOCKS WHERE "+
-    "USER_ID = 1 AND STOCK_SYMBOL = '" + ticker + "';")
+    "USER_ID = " + command[4] + " AND STOCK_SYMBOL = '" + ticker + "';")
     result = cursor.fetchone()
 
     # Error if user doesn't have the stock
     if result is None:
         sock.send("{}".format(
-            "403 message format error: Stock not found in bought list" 
+            "400 invalid command: Stock not found in bought list\n" 
         ))
         return
     initial_stock_bal = result[0]
@@ -122,28 +138,28 @@ def sell_command(sock, db, command):
     # Error if user has insufficient stock
     if float(command[2]) > initial_stock_bal:
         sock.send("{}".format(
-            "403 message format error: Insufficient Stock" 
+            "400 invalid command: Insufficient stock\n" 
         ))
         return
 
     # Determine new balance and update that and stock amount
     new_bal = initial_bal + gain
     db.execute("UPDATE STOCKS SET STOCK_BALANCE = STOCK_BALANCE - " +
-    command[2] + " WHERE USER_ID = 1 AND STOCK_SYMBOL = '" +
+    command[2] + " WHERE USER_ID = " + command[4] + " AND STOCK_SYMBOL = '" +
     ticker + "';")
     db.execute("UPDATE USERS SET USD_BALANCE = " + str(new_bal) +
-    " WHERE ID = 1;")
+    " WHERE ID = " + command[4] + ";")
     db.commit()
 
     # Get updated balances for outgoing message to client
     cursor.execute("SELECT STOCK_BALANCE FROM STOCKS WHERE " +
-    "USER_ID = 1 AND STOCK_SYMBOL = '" + ticker + "';")
+    "USER_ID = " + command[4] + " AND STOCK_SYMBOL = '" + ticker + "';")
     result = cursor.fetchone()
 
     # Indicate success to client with info
     sock.send("{}".format(
         "200 OK\nSOLD: New balance: " + str(result[0]) + " " + ticker +
-        ". USD balance " + str(new_bal)
+        ". USD balance " + str(new_bal) + "\n"
     ))
 
 
@@ -151,6 +167,7 @@ def bal_command(sock, db, command):
     # Initialize DB cursor for SQL
     cursor = db.cursor()
     # Get user's name and balance
+    # (default to USER_ID = 1 for this program)
     cursor.execute("""SELECT FIRST_NAME, LAST_NAME,
     USD_BALANCE FROM USERS WHERE ID = 1;""")
     result = cursor.fetchone()
@@ -159,7 +176,7 @@ def bal_command(sock, db, command):
 
     # Outgoing client message with info
     sock.send("{}".format(
-        "200 OK\nBalance for user " + name + ": " + bal
+        "200 OK\nBalance for user " + name + ": " + bal + "\n"
     ))
 
 
@@ -167,6 +184,7 @@ def list_command(sock, db, command):
     # Initialize DB cursor for SQL
     cursor = db.cursor()
     # Get listing info from user for each stock and output
+    # (default to USER_ID = 1 for this program)
     output="The list of records in the Stocks database for user 1: \n"
     for row in cursor.execute("""SELECT ID,STOCK_SYMBOL,STOCK_BALANCE,USER_ID FROM STOCKS
     WHERE USER_ID = 1"""):
@@ -176,7 +194,7 @@ def list_command(sock, db, command):
 
     # Outgoing client message with info
     sock.send("{}".format(
-        "200 OK\n  " + output
+        "200 OK\n" + output
         ))
 
 
@@ -228,6 +246,8 @@ def start_server():
 
     # Set up the server socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Ensure quick server restart
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind(("localhost", 5753))
     server_socket.listen(1)
 
@@ -257,13 +277,13 @@ def start_server():
                 list_command(client_socket, conn, words)
             elif words[0] == "QUIT":
                 client_socket.send("{}".format(
-                    "200 OK"
+                    "200 OK\n"
                 ))
                 server_socket.close()
                 print("Connection closed")
             elif words[0] == "SHUTDOWN":
                 client_socket.send("{}".format(
-                    "200 OK"
+                    "200 OK\n"
                 ))
                 client_socket.close()
                 server_socket.close()
@@ -272,7 +292,8 @@ def start_server():
         # Otherwise indicate invalid command received
         else:
             client_socket.send("{}".format(
-                "400 invalid command"  # Invalid command error
+                # Invalid command error
+                "403 message format error: check input and try again\n"
             ))
 
 
