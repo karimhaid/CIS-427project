@@ -293,6 +293,7 @@ def start_server():
                 ))
                 client_socket.close()
                 server_socket.close()
+                conn.close()
                 print("Connection closed")
                 exit()
         # Otherwise indicate invalid command received
