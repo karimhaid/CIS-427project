@@ -50,6 +50,11 @@ def buy_command(sock, db, command):
     # Initialize DB cursor for SQL
     cursor = db.cursor()
     # Determine cost and get user balance
+    if float(command[2]) <= 0 or float(command[3]) <= 0:
+        sock.send("{}".format(
+            "400 invalid command: amount and price must be positive\n"  
+        ))
+        return
     cost = float(command[2]) * float(command[3])  # quantity * price
     cursor.execute("SELECT USD_BALANCE FROM USERS WHERE ID = " +
     command[4] + ";")
@@ -109,6 +114,11 @@ def sell_command(sock, db, command):
     # Initialize DB cursor for SQL
     cursor = db.cursor()
     # Determine gain and get user balance
+    if float(command[2]) <= 0 or float(command[3]) <= 0:
+        sock.send("{}".format(
+            "400 invalid command: amount and price must be positive\n"  
+        ))
+        return
     gain = float(command[2]) * float(command[3])  # quantity * price
     cursor.execute("SELECT USD_BALANCE FROM USERS " +
     "WHERE ID = " + command[4] + ";")
