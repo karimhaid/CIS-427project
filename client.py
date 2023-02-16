@@ -32,13 +32,12 @@ def start_client(ip):
 
 
 if __name__ == '__main__':
-    # Get IP argument for client connection
-    ip_address = sys.argv[1]
-
     # Error for invalid arguments or missing argument
     if len(sys.argv) < 2 or ip_address not in VALID_IPS:
         print("Usage: client <Server IP Address> INVALID IP")
         exit()
     # Otherwise start the client with the given argument
     else:
+        # Get IP argument for client connection
+        ip_address = sys.argv[1]
         start_client(ip_address)
